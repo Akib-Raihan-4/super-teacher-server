@@ -1,6 +1,4 @@
 import { HttpStatus, INestApplication } from "@nestjs/common";
-import { JwtService } from "@nestjs/jwt";
-import { Test, TestingModule } from "@nestjs/testing";
 
 import { EntityManager, IDatabaseDriver, Connection, MikroORM } from "@mikro-orm/core";
 
@@ -8,11 +6,12 @@ import request from "supertest";
 
 import { User } from "@/common/entities/users.entity";
 
-import { AppModule } from "../../src/app.module";
 import { bootstrapTestServer } from "../utils/bootstrap";
 import { truncateTables } from "../utils/db";
+import { ClassroomFactory } from "../utils/factories/classrooms.factory";
 import { UserFactory } from "../utils/factories/users.factory";
-import { createClassroomDto } from "../utils/helpers/classrooms.helpers";
+import { getAccessToken } from "../utils/helpers/access-token.helpers";
+import { createTeacherInDb, createStudentInDb } from "../utils/helpers/create-user-in-db.helpers";
 import { THttpServer } from "../utils/types";
 
 describe("ClassroomsController (e2e)", () => {
@@ -20,7 +19,6 @@ describe("ClassroomsController (e2e)", () => {
   let dbService: EntityManager<IDatabaseDriver<Connection>>;
   let httpServer: THttpServer;
   let orm: MikroORM<IDatabaseDriver<Connection>>;
-  let jwtService: JwtService;
 
   beforeAll(async () => {
     const { appInstance, dbServiceInstance, httpServerInstance, ormInstance } =
@@ -29,12 +27,6 @@ describe("ClassroomsController (e2e)", () => {
     dbService = dbServiceInstance;
     httpServer = httpServerInstance;
     orm = ormInstance;
-
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    jwtService = moduleFixture.get<JwtService>(JwtService);
   });
 
   afterAll(async () => {
@@ -53,26 +45,26 @@ describe("ClassroomsController (e2e)", () => {
     let teacherToken: string;
     let studentUser: User;
     let studentToken: string;
-    let classroomDto: ReturnType<typeof createClassroomDto>;
+    let classroomDto: ReturnType<typeof ClassroomFactory.createClassroomDto>;
 
     beforeEach(async () => {
-      teacherUser = await UserFactory.createTeacher(dbService);
-      teacherToken = jwtService.sign({
-        id: teacherUser.id,
-        firstName: teacherUser.firstName,
-        email: teacherUser.email,
-        userType: teacherUser.userType,
-      });
+      const {
+        user: teacherUserData,
+        teacher,
+        plainTextPassword: teacherPassword,
+      } = await UserFactory.createTeacher();
+      teacherUser = await createTeacherInDb(dbService, teacherUserData, teacher);
+      teacherToken = await getAccessToken(httpServer, teacherUser.email, teacherPassword);
 
-      studentUser = await UserFactory.createStudent(dbService);
-      studentToken = jwtService.sign({
-        id: studentUser.id,
-        firstName: studentUser.firstName,
-        email: studentUser.email,
-        userType: studentUser.userType,
-      });
+      const {
+        user: studentUserData,
+        student,
+        plainTextPassword: studentPassword,
+      } = await UserFactory.createStudent();
+      studentUser = await createStudentInDb(dbService, studentUserData, student);
+      studentToken = await getAccessToken(httpServer, studentUser.email, studentPassword);
 
-      classroomDto = createClassroomDto();
+      classroomDto = ClassroomFactory.createClassroomDto();
     });
 
     it("should create a classroom successfully when teacher is authenticated", async () => {
@@ -82,13 +74,15 @@ describe("ClassroomsController (e2e)", () => {
         .send(classroomDto)
         .expect(HttpStatus.CREATED);
 
-      expect(response.body).toMatchObject({
-        id: expect.any(Number),
-        title: classroomDto.title,
-        subject: classroomDto.subject,
-        days: classroomDto.days,
-        userId: teacherUser.id,
-      });
+      expect(response.body).toEqual(
+        expect.objectContaining({
+          id: expect.any(Number),
+          title: classroomDto.title,
+          subject: classroomDto.subject,
+          days: classroomDto.days,
+          userId: teacherUser.id,
+        }),
+      );
 
       expect(Date.parse(response.body.classTime)).not.toBeNaN();
     });
