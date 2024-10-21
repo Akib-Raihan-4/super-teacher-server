@@ -87,7 +87,7 @@
     "winston-daily-rotate-file": "^4.7.1"
   },
   "devDependencies": {
-    "@commitlint/cli": "^17.4.2",
+    "@commitlint/cli": "^19.5.0",
     "@commitlint/config-conventional": "^17.4.2",
     "@faker-js/faker": "^8.4.0",
     "@nestjs/cli": "^10.3.2",
