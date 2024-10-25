@@ -18,7 +18,7 @@ import {
   createTeacherRegistrationData,
   createUniqueCode,
   createUser,
-  createOtp
+  createOtp,
 } from "../utils/helpers/auth.helpers";
 import { THttpServer } from "../utils/types";
 

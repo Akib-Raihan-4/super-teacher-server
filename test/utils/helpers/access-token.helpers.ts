@@ -2,18 +2,22 @@ import { HttpStatus } from "@nestjs/common";
 
 import request from "supertest";
 
-import { MOCK_AUTH_EMAIL, MOCK_AUTH_PASS } from "../../auth/auth.mock";
-import { bootstrapTestServer } from "../bootstrap";
+import { THttpServer } from "../types";
 
 export async function getAccessToken(
-  httpServer: Awaited<ReturnType<typeof bootstrapTestServer>>["httpServerInstance"],
-  email = MOCK_AUTH_EMAIL,
-  password = MOCK_AUTH_PASS,
-) {
-  const { body } = await request(httpServer)
-    .post("/auth/login")
-    .send({ email, password })
-    .expect(HttpStatus.CREATED);
+  httpServer: THttpServer,
+  email: string,
+  password: string,
+): Promise<string> {
+  const response = await request(httpServer).post("/auth/login").send({ email, password });
 
-  return body.data.accessToken;
+  if (response.status !== HttpStatus.CREATED) {
+    throw new Error(`Login failed: ${response.status} ${JSON.stringify(response.body)}`);
+  }
+
+  if (!response.body.token) {
+    throw new Error(`Token not found in response: ${JSON.stringify(response.body)}`);
+  }
+
+  return response.body.token;
 }

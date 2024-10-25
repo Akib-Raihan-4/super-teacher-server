@@ -1,48 +1,23 @@
-import { EntityManager, IDatabaseDriver, Connection } from "@mikro-orm/core";
+import { EntityManager } from "@mikro-orm/core";
 
-import * as argon2 from "argon2";
+import { Student } from "@/common/entities/students.entity";
+import { Teacher } from "@/common/entities/teachers.entity";
+import { User } from "@/common/entities/users.entity";
 
-import { ARGON2_OPTIONS } from "@/common/config/argon2.config";
-import { Role } from "@/common/entities/roles.entity";
-import { EUserRole } from "@/common/enums/roles.enums";
+export async function createStudentInDb(
+  em: EntityManager,
+  user: User,
+  student: Student,
+): Promise<User> {
+  await em.persistAndFlush([user, student]);
+  return user;
+}
 
-import { MOCK_AUTH_EMAIL, MOCK_AUTH_PASS } from "../../auth/auth.mock";
-import { UserFactory, UserProfileFactory } from "../factories/users.factory";
-
-export const createUserInDb = async (
-  dbService: EntityManager<IDatabaseDriver<Connection>>,
-  config?: {
-    email?: string;
-    password?: string;
-    role?: EUserRole;
-  },
-) => {
-  const defaultConfig = {
-    email: MOCK_AUTH_EMAIL,
-    password: MOCK_AUTH_PASS,
-    role: EUserRole.ADMIN,
-  };
-
-  const password = config?.password || defaultConfig.password;
-  const hashedPassword = await argon2.hash(password, ARGON2_OPTIONS);
-
-  const values = {
-    ...defaultConfig,
-    ...config,
-    password: hashedPassword,
-  };
-  const user = new UserFactory(dbService).makeOne({
-    email: values.email,
-    password: values.password,
-  });
-  const userProfile = new UserProfileFactory(dbService).makeOne();
-  const role = await dbService.findOneOrFail(Role, { name: values.role });
-
-  user.userProfile = userProfile;
-  userProfile.user = user;
-  userProfile.role = role;
-
-  await dbService.flush();
-
-  return userProfile;
-};
+export async function createTeacherInDb(
+  em: EntityManager,
+  user: User,
+  teacher: Teacher,
+): Promise<User> {
+  await em.persistAndFlush([user, teacher]);
+  return user;
+}
