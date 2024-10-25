@@ -4,6 +4,7 @@ import { EntityManager, IDatabaseDriver, Connection, MikroORM } from "@mikro-orm
 
 import request from "supertest";
 
+import { User } from "@/common/entities/users.entity";
 import { EEducationLevel, EMedium } from "@/common/enums/students.enums";
 import { EUserType } from "@/common/enums/users.enums";
 
@@ -291,6 +292,75 @@ describe("UsersController (e2e)", () => {
         .put("/users/user-details")
         .set("Authorization", `Bearer ${token}`)
         .send(invalidEditUserDto)
+        .expect(HttpStatus.BAD_REQUEST);
+    });
+  });
+
+  describe("PUT /users/reset-password", () => {
+    let user: User;
+    let token: string;
+    const oldPassword = "password123";
+    const newPassword = "newPassword123";
+
+    beforeEach(async () => {
+      user = await createUser(dbService, EUserType.STUDENT);
+      token = await getAccessToken(httpServer, user.email, oldPassword);
+    });
+
+    it("should reset password successfully", async () => {
+      await request(httpServer)
+        .put("/users/reset-password")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          oldPassword: oldPassword,
+          newPassword: newPassword,
+        })
+        .expect(HttpStatus.OK);
+    });
+
+    it("should return 401 Unauthorized when old password is incorrect", async () => {
+      const response = await request(httpServer)
+        .put("/users/reset-password")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          oldPassword: "incorrectOldPassword",
+          newPassword: newPassword,
+        })
+        .expect(HttpStatus.UNAUTHORIZED);
+
+      expect(response.body.message).toBe("Old password is incorrect");
+    });
+
+    it("should return 400 Bad Request when new password is the same as old password", async () => {
+      const response = await request(httpServer)
+        .put("/users/reset-password")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          oldPassword: oldPassword,
+          newPassword: oldPassword,
+        })
+        .expect(HttpStatus.BAD_REQUEST);
+
+      expect(response.body.message).toBe("Cannot set a previously used password");
+    });
+
+    it("should return 401 Unauthorized when no token is provided", async () => {
+      await request(httpServer)
+        .put("/users/reset-password")
+        .send({
+          oldPassword: oldPassword,
+          newPassword: newPassword,
+        })
+        .expect(HttpStatus.UNAUTHORIZED);
+    });
+
+    it("should return 400 Bad Request when required fields are missing", async () => {
+      await request(httpServer)
+        .put("/users/reset-password")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          oldPassword: oldPassword,
+        })
         .expect(HttpStatus.BAD_REQUEST);
     });
   });
