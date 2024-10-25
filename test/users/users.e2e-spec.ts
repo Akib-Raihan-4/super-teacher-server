@@ -5,11 +5,13 @@ import { EntityManager, IDatabaseDriver, Connection, MikroORM } from "@mikro-orm
 import request from "supertest";
 
 import { EEducationLevel } from "@/common/enums/students.enums";
+import { EUserType } from "@/common/enums/users.enums";
 
 import { bootstrapTestServer } from "../utils/bootstrap";
 import { truncateTables } from "../utils/db";
 import { UserFactory } from "../utils/factories/users.factory";
 import { getAccessToken } from "../utils/helpers/access-token.helpers";
+import { createUser } from "../utils/helpers/auth.helpers";
 import { createStudentInDb, createTeacherInDb } from "../utils/helpers/create-user-in-db.helpers";
 import { THttpServer } from "../utils/types";
 
@@ -148,6 +150,37 @@ describe("UsersController (e2e)", () => {
     it("should return 401 Unauthorized when an invalid token is provided", async () => {
       await request(httpServer)
         .get("/users/user-details")
+        .set("Authorization", "Bearer invalidtoken")
+        .expect(HttpStatus.UNAUTHORIZED);
+    });
+  });
+
+  describe("GET /users/me", () => {
+    it("should return user information when authenticated", async () => {
+      const user = await createUser(dbService, EUserType.STUDENT);
+
+      const token = await getAccessToken(httpServer, user.email, "password123");
+
+      const response = await request(httpServer)
+        .get("/users/me")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(HttpStatus.OK);
+
+      expect(response.body).toEqual({
+        id: user.id,
+        firstName: user.firstName,
+        email: user.email,
+        userType: user.userType,
+      });
+    });
+
+    it("should return 401 Unauthorized when no token is provided", async () => {
+      await request(httpServer).get("/users/me").expect(HttpStatus.UNAUTHORIZED);
+    });
+
+    it("should return 401 Unauthorized when an invalid token is provided", async () => {
+      await request(httpServer)
+        .get("/users/me")
         .set("Authorization", "Bearer invalidtoken")
         .expect(HttpStatus.UNAUTHORIZED);
     });
