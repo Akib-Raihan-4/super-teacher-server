@@ -141,3 +141,19 @@ $ yarn run test:e2e
 # test coverage
 $ yarn run test:cov
 ```
+
+
+<!-- README FOR DOCKER -->
+
+# Run docker compose
+docker-compose up -d
+
+# Wait a few seconds for localstack to fully start
+sleep 5
+docker exec localstack-main awslocal s3 mb s3://project-dev-bucket
+
+# Verify the bucket was created:
+docker exec localstack-main awslocal s3 ls
+
+# Check backend logs
+docker logs superteacher_be -f

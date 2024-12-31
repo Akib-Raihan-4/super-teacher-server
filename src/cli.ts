@@ -1,13 +1,18 @@
-import { NestFactory } from "@nestjs/core";
+import { Logger } from "@nestjs/common";
 
 import { CommandFactory } from "nest-commander";
 
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  await app.init();
-  await CommandFactory.run(AppModule, ["warn", "error"]);
+  try {
+    await CommandFactory.run(AppModule, {
+      logger: ["warn", "error"],
+    });
+  } catch (error) {
+    Logger.error("Command execution failed", error);
+    process.exit(1);
+  }
 }
 
 bootstrap();

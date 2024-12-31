@@ -1,5 +1,6 @@
 #!/bin/sh
 
-yarn db:migration:up:prod
-yarn db:seed:prod
-yarn start:prod
+yarn db:migration:up:dev
+# awslocal s3 mb s3://project_dev
+yarn start:dev
+

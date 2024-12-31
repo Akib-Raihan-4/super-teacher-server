@@ -60,9 +60,8 @@ export class FileUploadsService {
         Key: fileKey,
         ResponseContentDisposition: `attachment; filename="${fileKey.split("/").pop()}"`,
       });
-
       const signedUrl = await getSignedUrl(this.s3Client, command, { expiresIn: 3600 });
-      return signedUrl;
+      return signedUrl.replace("localstack", "localhost");
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
       throw new Error(`Download URL ERROR: ${errorMessage}`);

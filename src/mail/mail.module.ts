@@ -9,12 +9,17 @@ import { MailService } from "./mail.service";
       transport: {
         host: process.env.MAIL_HOST,
         port: Number(process.env.MAIL_PORT),
-        ignoreTLS: true,
-        secure: true,
         auth: {
           user: process.env.MAIL_USER,
           pass: process.env.MAIL_PASSWORD,
         },
+        secure: false,
+        tls: {
+          rejectUnauthorized: false,
+        },
+      },
+      defaults: {
+        from: '"No Reply" <noreply@example.com>',
       },
     }),
   ],
